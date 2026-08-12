@@ -1,46 +1,46 @@
-import { getDb } from '@/lib/db/index.js';
+import { ensureSupabase } from '@/lib/supabase/client.js';
 import { NextResponse } from 'next/server';
 import { auditLog } from '@/lib/audit/index.js';
 
+const TABLE = 'quotas';
+
 export async function getQuotas(filters = {}) {
-  const db = await getDb();
-  let quotas = db.data.quotas;
-  if (filters.agent_id) quotas = quotas.filter(q => q.agent_id === filters.agent_id);
-  if (filters.type) quotas = quotas.filter(q => q.type === filters.type);
-  if (filters.status) quotas = quotas.filter(q => q.status === filters.status);
-  return quotas.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const supabase = await ensureSupabase();
+  let query = supabase.from(TABLE).select('*');
+  if (filters.agent_id) query = query.eq('agent_id', filters.agent_id);
+  if (filters.type) query = query.eq('type', filters.type);
+  if (filters.status) query = query.eq('status', filters.status);
+  const { data, error } = await query.order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export async function getQuotaById(id) {
-  const db = await getDb();
-  return db.data.quotas.find(q => q.id === id) || null;
+  const supabase = await ensureSupabase();
+  const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).single();
+  if (error) return null;
+  return data;
 }
 
 export async function getAgentQuota(agentId) {
-  const db = await getDb();
-  const quotas = db.data.quotas.filter(q => q.agent_id === agentId);
-  const totalAllocated = quotas
-    .filter(q => q.type === 'allocated')
-    .reduce((sum, q) => sum + q.amount, 0);
-  const totalConsumed = quotas
-    .filter(q => q.type === 'consumed')
-    .reduce((sum, q) => sum + q.amount, 0);
-  const totalRecharged = quotas
-    .filter(q => q.type === 'recharged')
-    .reduce((sum, q) => sum + q.amount, 0);
+  const supabase = await ensureSupabase();
+  const { data, error } = await supabase.from(TABLE).select('*').eq('agent_id', agentId);
+  if (error) throw new Error(error.message);
+  const quotas = data || [];
+  const allocated = quotas.filter(q => q.type === 'allocated').reduce((sum, q) => sum + Number(q.amount), 0);
+  const consumed = quotas.filter(q => q.type === 'consumed').reduce((sum, q) => sum + Number(q.amount), 0);
+  const recharged = quotas.filter(q => q.type === 'recharged').reduce((sum, q) => sum + Number(q.amount), 0);
   return {
     agent_id: agentId,
-    allocated: totalAllocated,
-    consumed: totalConsumed,
-    recharged: totalRecharged,
-    balance: totalAllocated + totalRecharged - totalConsumed
+    allocated,
+    consumed,
+    recharged,
+    balance: allocated + recharged - consumed
   };
 }
 
 export async function allocateQuota({ agentId, amount, referenceId, details, createdBy }) {
-  const db = await getDb();
-  const agent = db.data.agents.find(a => a.id === agentId);
-  if (!agent) throw new Error('Agent not found');
+  const supabase = await ensureSupabase();
   const quota = {
     id: `quota_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     agent_id: agentId,
@@ -52,9 +52,8 @@ export async function allocateQuota({ agentId, amount, referenceId, details, cre
     created_by: createdBy || null,
     created_at: new Date().toISOString()
   };
-  db.data.quotas.push(quota);
-  agent.quota_limit += amount;
-  await db.write();
+  const { data, error } = await supabase.from(TABLE).insert(quota).select().single();
+  if (error) throw new Error(error.message);
   await auditLog({
     actor_id: createdBy,
     action: 'quota.allocated',
@@ -62,16 +61,11 @@ export async function allocateQuota({ agentId, amount, referenceId, details, cre
     resource_id: quota.id,
     details: { agent_id: agentId, amount, reference_id: referenceId }
   });
-  return quota;
+  return data;
 }
 
 export async function consumeQuota({ agentId, amount, referenceId, details, createdBy }) {
-  const db = await getDb();
-  const agent = db.data.agents.find(a => a.id === agentId);
-  if (!agent) throw new Error('Agent not found');
-  if (agent.quota_limit - agent.quota_used < amount) {
-    throw new Error('Insufficient quota');
-  }
+  const supabase = await ensureSupabase();
   const quota = {
     id: `quota_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     agent_id: agentId,
@@ -83,9 +77,8 @@ export async function consumeQuota({ agentId, amount, referenceId, details, crea
     created_by: createdBy || null,
     created_at: new Date().toISOString()
   };
-  db.data.quotas.push(quota);
-  agent.quota_used += amount;
-  await db.write();
+  const { data, error } = await supabase.from(TABLE).insert(quota).select().single();
+  if (error) throw new Error(error.message);
   await auditLog({
     actor_id: createdBy,
     action: 'quota.consumed',
@@ -93,13 +86,11 @@ export async function consumeQuota({ agentId, amount, referenceId, details, crea
     resource_id: quota.id,
     details: { agent_id: agentId, amount, reference_id: referenceId }
   });
-  return quota;
+  return data;
 }
 
 export async function rechargeQuota({ agentId, amount, paymentId, method, details, createdBy }) {
-  const db = await getDb();
-  const agent = db.data.agents.find(a => a.id === agentId);
-  if (!agent) throw new Error('Agent not found');
+  const supabase = await ensureSupabase();
   const quota = {
     id: `quota_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     agent_id: agentId,
@@ -111,9 +102,8 @@ export async function rechargeQuota({ agentId, amount, paymentId, method, detail
     created_by: createdBy || null,
     created_at: new Date().toISOString()
   };
-  db.data.quotas.push(quota);
-  agent.quota_limit += amount;
-  await db.write();
+  const { data, error } = await supabase.from(TABLE).insert(quota).select().single();
+  if (error) throw new Error(error.message);
   await auditLog({
     actor_id: createdBy,
     action: 'quota.recharged',
@@ -121,16 +111,19 @@ export async function rechargeQuota({ agentId, amount, paymentId, method, detail
     resource_id: quota.id,
     details: { agent_id: agentId, amount, payment_id: paymentId, method }
   });
-  return quota;
+  return data;
 }
 
 export async function getQuotaUsageReport(agentId, startDate, endDate) {
-  const db = await getDb();
-  let logs = db.data.quotas.filter(q => q.agent_id === agentId);
-  if (startDate) logs = logs.filter(q => new Date(q.created_at) >= new Date(startDate));
-  if (endDate) logs = logs.filter(q => new Date(q.created_at) <= new Date(endDate));
-  const allocated = logs.filter(q => q.type === 'allocated').reduce((s, q) => s + q.amount, 0);
-  const consumed = logs.filter(q => q.type === 'consumed').reduce((s, q) => s + q.amount, 0);
-  const recharged = logs.filter(q => q.type === 'recharged').reduce((s, q) => s + q.amount, 0);
+  const supabase = await ensureSupabase();
+  let query = supabase.from(TABLE).select('*').eq('agent_id', agentId);
+  if (startDate) query = query.gte('created_at', startDate);
+  if (endDate) query = query.lte('created_at', endDate);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  const logs = data || [];
+  const allocated = logs.filter(q => q.type === 'allocated').reduce((s, q) => s + Number(q.amount), 0);
+  const consumed = logs.filter(q => q.type === 'consumed').reduce((s, q) => s + Number(q.amount), 0);
+  const recharged = logs.filter(q => q.type === 'recharged').reduce((s, q) => s + Number(q.amount), 0);
   return { allocated, consumed, recharged, balance: allocated + recharged - consumed, logs };
 }

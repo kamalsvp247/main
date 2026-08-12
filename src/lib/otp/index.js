@@ -1,12 +1,13 @@
-import { getDb } from '@/lib/db/index.js';
+import { ensureSupabase } from '@/lib/supabase/client.js';
 import { NextResponse } from 'next/server';
-import { auditLog } from '@/lib/audit/index.js';
+
+const TABLE = 'otp_requests';
 
 const DAKBOX_API_URL = process.env.DAKBOX_API_URL || 'https://dakbox.net/api/v1';
 const DAKBOX_API_KEY = process.env.DAKBOX_API_KEY || '';
 
 export async function requestOTP({ phoneNumber, candidateName, requestId }) {
-  const db = await getDb();
+  const supabase = await ensureSupabase();
   const otpRequest = {
     id: `otp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     phone_number: phoneNumber,
@@ -19,8 +20,8 @@ export async function requestOTP({ phoneNumber, candidateName, requestId }) {
     created_at: new Date().toISOString(),
     resolved_at: null
   };
-  db.data.otpRequests.push(otpRequest);
-  await db.write();
+  const { data, error } = await supabase.from(TABLE).insert(otpRequest).select().single();
+  if (error) throw new Error(error.message);
   if (DAKBOX_API_KEY) {
     try {
       const res = await fetch(`${DAKBOX_API_URL}/otp/request`, {
@@ -31,35 +32,24 @@ export async function requestOTP({ phoneNumber, candidateName, requestId }) {
         },
         body: JSON.stringify({ phone_number: phoneNumber, candidate_name: candidateName })
       });
-      const data = await res.json();
-      otpRequest.dakbox_request_id = data.request_id || data.id;
-      otpRequest.status = data.success ? 'sent' : 'failed';
-      await db.write();
-    } catch (error) {
-      otpRequest.status = 'failed';
-      otpRequest.error = error.message;
-      await db.write();
+      const result = await res.json();
+      await supabase.from(TABLE).update({ dakbox_request_id: result.request_id || result.id, status: result.success ? 'sent' : 'failed' }).eq('id', data.id);
+    } catch (err) {
+      await supabase.from(TABLE).update({ status: 'failed', error: err.message }).eq('id', data.id);
     }
   }
-  await auditLog({
-    action: 'otp.requested',
-    resource_type: 'otp',
-    resource_id: otpRequest.id,
-    details: { phone_number: phoneNumber, candidate_name: candidateName }
-  });
-  return otpRequest;
+  return data;
 }
 
 export async function pollOTP(otpRequestId) {
-  const db = await getDb();
-  const otpRequest = db.data.otpRequests.find(o => o.id === otpRequestId);
-  if (!otpRequest) return null;
+  const supabase = await ensureSupabase();
+  const { data: otpRequest, error } = await supabase.from(TABLE).select('*').eq('id', otpRequestId).single();
+  if (error || !otpRequest) return null;
   if (otpRequest.status === 'resolved') {
     return { ...otpRequest, otp_code: otpRequest.otp_code };
   }
   if (otpRequest.attempts >= otpRequest.max_attempts) {
-    otpRequest.status = 'expired';
-    await db.write();
+    await supabase.from(TABLE).update({ status: 'expired' }).eq('id', otpRequestId);
     return { ...otpRequest, otp_code: null };
   }
   if (DAKBOX_API_KEY && otpRequest.dakbox_request_id) {
@@ -67,47 +57,40 @@ export async function pollOTP(otpRequestId) {
       const res = await fetch(`${DAKBOX_API_URL}/otp/poll/${otpRequest.dakbox_request_id}`, {
         headers: { 'Authorization': `Bearer ${DAKBOX_API_KEY}` }
       });
-      const data = await res.json();
-      if (data.otp_code || data.code) {
-        otpRequest.otp_code = data.otp_code || data.code;
-        otpRequest.status = 'resolved';
-        otpRequest.resolved_at = new Date().toISOString();
-        await db.write();
-        await auditLog({
-          action: 'otp.resolved',
-          resource_type: 'otp',
-          resource_id: otpRequest.id,
-          details: { phone_number: otpRequest.phone_number }
-        });
-        return { ...otpRequest, otp_code: otpRequest.otp_code };
+      const result = await res.json();
+      if (result.otp_code || result.code) {
+        await supabase.from(TABLE).update({ otp_code: result.otp_code || result.code, status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', otpRequestId);
+        const updated = { ...otpRequest, otp_code: result.otp_code || result.code, status: 'resolved', resolved_at: new Date().toISOString() };
+        return updated;
       }
-    } catch (error) {
-      console.error('[OTP] Poll error:', error.message);
+    } catch (err) {
+      console.error('[OTP] Poll error:', err.message);
     }
   }
-  otpRequest.attempts += 1;
-  await db.write();
-  return { ...otpRequest, otp_code: null };
+  await supabase.from(TABLE).update({ attempts: otpRequest.attempts + 1 }).eq('id', otpRequestId);
+  return { ...otpRequest, attempts: otpRequest.attempts + 1, otp_code: null };
 }
 
 export async function getOTPRequest(id) {
-  const db = await getDb();
-  return db.data.otpRequests.find(o => o.id === id) || null;
+  const supabase = await ensureSupabase();
+  const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).single();
+  if (error) return null;
+  return data;
 }
 
 export async function getAllOTPRequests(filters = {}) {
-  const db = await getDb();
-  let requests = db.data.otpRequests;
-  if (filters.status) requests = requests.filter(r => r.status === filters.status);
-  if (filters.phone_number) requests = requests.filter(r => r.phone_number === filters.phone_number);
-  return requests.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const supabase = await ensureSupabase();
+  let query = supabase.from(TABLE).select('*');
+  if (filters.status) query = query.eq('status', filters.status);
+  if (filters.phone_number) query = query.eq('phone_number', filters.phone_number);
+  const { data, error } = await query.order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export async function cancelOTPRequest(id) {
-  const db = await getDb();
-  const idx = db.data.otpRequests.findIndex(o => o.id === id);
-  if (idx === -1) return false;
-  db.data.otpRequests[idx].status = 'cancelled';
-  await db.write();
+  const supabase = await ensureSupabase();
+  const { error } = await supabase.from(TABLE).update({ status: 'cancelled' }).eq('id', id);
+  if (error) throw new Error(error.message);
   return true;
 }

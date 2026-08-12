@@ -1,34 +1,44 @@
-import { getDb } from '@/lib/db/index.js';
+import { ensureSupabase } from '@/lib/supabase/client.js';
 import { NextResponse } from 'next/server';
 import { auditLog } from '@/lib/audit/index.js';
 
+const TABLE = 'agents';
+
 export async function getAgents() {
-  const db = await getDb();
-  return db.data.agents;
+  const supabase = await ensureSupabase();
+  const { data, error } = await supabase.from(TABLE).select('*');
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export async function getAgentById(id) {
-  const db = await getDb();
-  return db.data.agents.find(a => a.id === id) || null;
+  const supabase = await ensureSupabase();
+  const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).single();
+  if (error) return null;
+  return data;
 }
 
 export async function getAgentByEmail(email) {
-  const db = await getDb();
-  return db.data.agents.find(a => a.email === email) || null;
+  const supabase = await ensureSupabase();
+  const { data, error } = await supabase.from(TABLE).select('*').eq('email', email).single();
+  if (error) return null;
+  return data;
 }
 
 export async function getSubAgents(parentId) {
-  const db = await getDb();
-  return db.data.agents.filter(a => a.parent_id === parentId);
+  const supabase = await ensureSupabase();
+  const { data, error } = await supabase.from(TABLE).select('*').eq('parent_id', parentId);
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export async function getAgentTree(rootId) {
-  const db = await getDb();
-  const root = db.data.agents.find(a => a.id === rootId);
+  const supabase = await ensureSupabase();
+  const root = await getAgentById(rootId);
   if (!root) return null;
-  const children = db.data.agents.filter(a => a.parent_id === rootId);
+  const children = await getSubAgents(rootId);
   const buildTree = async (parentId) => {
-    const direct = db.data.agents.filter(a => a.parent_id === parentId);
+    const direct = await getSubAgents(parentId);
     return Promise.all(direct.map(async (agent) => ({
       ...agent,
       children: await buildTree(agent.id)
@@ -41,10 +51,11 @@ export async function getAgentTree(rootId) {
 }
 
 export async function createAgent({ name, email, phone, parentId, quotaLimit, balance, createdBy }) {
-  const db = await getDb();
+  const supabase = await ensureSupabase();
   if (await getAgentByEmail(email)) {
     throw new Error('Agent with this email already exists');
   }
+  const parent = parentId ? await getAgentById(parentId) : null;
   const agent = {
     id: `agent_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     name,
@@ -55,13 +66,13 @@ export async function createAgent({ name, email, phone, parentId, quotaLimit, ba
     quota_used: 0,
     balance: balance || 0,
     status: 'active',
-    level: parentId ? (await getAgentById(parentId))?.level + 1 || 1 : 0,
+    level: parentId ? (parent?.level || 0) + 1 : 0,
     created_by: createdBy || null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
-  db.data.agents.push(agent);
-  await db.write();
+  const { data, error } = await supabase.from(TABLE).insert(agent).select().single();
+  if (error) throw new Error(error.message);
   await auditLog({
     actor_id: createdBy,
     action: 'agent.created',
@@ -69,38 +80,34 @@ export async function createAgent({ name, email, phone, parentId, quotaLimit, ba
     resource_id: agent.id,
     details: { name, email, parent_id: parentId, quota_limit: quotaLimit }
   });
-  return agent;
+  return data;
 }
 
 export async function updateAgent(id, updates) {
-  const db = await getDb();
-  const idx = db.data.agents.findIndex(a => a.id === id);
-  if (idx === -1) return null;
-  db.data.agents[idx] = { ...db.data.agents[idx], ...updates, updated_at: new Date().toISOString() };
-  await db.write();
-  return db.data.agents[idx];
+  const supabase = await ensureSupabase();
+  updates.updated_at = new Date().toISOString();
+  const { data, error } = await supabase.from(TABLE).update(updates).eq('id', id).select().single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function deleteAgent(id) {
-  const db = await getDb();
-  const idx = db.data.agents.findIndex(a => a.id === id);
-  if (idx === -1) return false;
-  db.data.agents.splice(idx, 1);
-  await db.write();
+  const supabase = await ensureSupabase();
+  const { error } = await supabase.from(TABLE).delete().eq('id', id);
+  if (error) throw new Error(error.message);
   return true;
 }
 
 export async function distributeQuota(parentId, childId, amount) {
-  const db = await getDb();
-  const parent = db.data.agents.find(a => a.id === parentId);
-  const child = db.data.agents.find(a => a.id === childId);
+  const supabase = await ensureSupabase();
+  const parent = await getAgentById(parentId);
+  const child = await getAgentById(childId);
   if (!parent || !child) throw new Error('Invalid agent IDs');
   if (parent.quota_limit - parent.quota_used < amount) {
     throw new Error('Insufficient quota balance');
   }
-  parent.quota_used += amount;
-  child.quota_limit += amount;
-  await db.write();
+  await supabase.from(TABLE).update({ quota_used: parent.quota_used + amount }).eq('id', parentId);
+  await supabase.from(TABLE).update({ quota_limit: child.quota_limit + amount }).eq('id', childId);
   await auditLog({
     actor_id: parentId,
     action: 'quota.distributed',
@@ -108,14 +115,13 @@ export async function distributeQuota(parentId, childId, amount) {
     resource_id: childId,
     details: { amount, from: parentId, to: childId }
   });
-  return { parent, child };
+  return { parent: { ...parent, quota_used: parent.quota_used + amount }, child: { ...child, quota_limit: child.quota_limit + amount } };
 }
 
 export async function getAgentStats(agentId) {
-  const db = await getDb();
-  const agent = db.data.agents.find(a => a.id === agentId);
+  const agent = await getAgentById(agentId);
   if (!agent) return null;
-  const subAgents = db.data.agents.filter(a => a.parent_id === agentId);
+  const subAgents = await getSubAgents(agentId);
   const totalSubQuota = subAgents.reduce((sum, a) => sum + a.quota_limit, 0);
   const totalSubUsed = subAgents.reduce((sum, a) => sum + a.quota_used, 0);
   return {

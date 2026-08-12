@@ -11,7 +11,6 @@
  *   - Dynamic wizard step detection
  */
 
-import { chromium } from 'playwright';
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { getToken as getAuthToken, isLoggedIn as checkLoggedIn, logout as doLogout } from './svp-auth.js';
@@ -24,6 +23,16 @@ const SVP_API_BASE = 'https://svp-international-api.pacc.sa/api/v1';
 
 const TOKEN_FILE = join(process.cwd(), '.svp-token.json');
 const STORAGE_FILE = join(process.cwd(), '.svp-storage.json');
+
+// Lazy-load Playwright only when actually needed (Vercel serverless
+// can't bundle browsers, so this keeps token-only routes working).
+let playwrightModule = null;
+async function getPlaywright() {
+  if (!playwrightModule) {
+    playwrightModule = await import('playwright');
+  }
+  return playwrightModule;
+}
 
 // ─── Retry & Resilience Utilities ────────────────────────────────
 

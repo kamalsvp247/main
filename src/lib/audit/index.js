@@ -1,25 +1,31 @@
-import { getDb } from '@/lib/db/index.js';
+import { ensureSupabase } from '@/lib/supabase/client.js';
 import { NextResponse } from 'next/server';
 
+const TABLE = 'audit_logs';
+
 export async function getAuditLogs(filters = {}) {
-  const db = await getDb();
-  let logs = db.data.auditLogs;
-  if (filters.actor_id) logs = logs.filter(l => l.actor_id === filters.actor_id);
-  if (filters.action) logs = logs.filter(l => l.action === filters.action);
-  if (filters.resource_type) logs = logs.filter(l => l.resource_type === filters.resource_type);
-  if (filters.resource_id) logs = logs.filter(l => l.resource_id === filters.resource_id);
-  if (filters.start_date) logs = logs.filter(l => new Date(l.created_at) >= new Date(filters.start_date));
-  if (filters.end_date) logs = logs.filter(l => new Date(l.created_at) <= new Date(filters.end_date));
-  return logs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const supabase = await ensureSupabase();
+  let query = supabase.from(TABLE).select('*');
+  if (filters.actor_id) query = query.eq('actor_id', filters.actor_id);
+  if (filters.action) query = query.eq('action', filters.action);
+  if (filters.resource_type) query = query.eq('resource_type', filters.resource_type);
+  if (filters.resource_id) query = query.eq('resource_id', filters.resource_id);
+  if (filters.start_date) query = query.gte('created_at', filters.start_date);
+  if (filters.end_date) query = query.lte('created_at', filters.end_date);
+  const { data, error } = await query.order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export async function getAuditLogById(id) {
-  const db = await getDb();
-  return db.data.auditLogs.find(l => l.id === id) || null;
+  const supabase = await ensureSupabase();
+  const { data, error } = await supabase.from(TABLE).select('*').eq('id', id).single();
+  if (error) return null;
+  return data;
 }
 
 export async function auditLog({ actor_id, action, resource_type, resource_id, details, ip_address }) {
-  const db = await getDb();
+  const supabase = await ensureSupabase();
   const log = {
     id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     actor_id: actor_id || null,
@@ -31,9 +37,9 @@ export async function auditLog({ actor_id, action, resource_type, resource_id, d
     user_agent: null,
     created_at: new Date().toISOString()
   };
-  db.data.auditLogs.push(log);
-  await db.write();
-  return log;
+  const { data, error } = await supabase.from(TABLE).insert(log).select().single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function exportAuditLogs(format = 'json') {
