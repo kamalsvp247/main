@@ -1,0 +1,48 @@
+
+> pacc-scraper-api@0.1.0 build
+> next build
+
+▲ Next.js 16.2.10 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 13.5s
+  Running TypeScript ...
+  Finished TypeScript in 251ms ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/7) ...
+  Generating static pages using 7 workers (1/7) 
+  Generating static pages using 7 workers (3/7) 
+  Generating static pages using 7 workers (5/7) 
+✓ Generating static pages using 7 workers (7/7) in 217ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/profile
+├ ƒ /api/auth/status
+├ ƒ /api/dates
+├ ƒ /api/debug/session-center-probe
+├ ƒ /api/debug/wizard-intercept
+├ ƒ /api/exam/cancel
+├ ƒ /api/exam/certificate/[id]
+├ ƒ /api/exam/peek-time
+├ ƒ /api/exam/rebook
+├ ƒ /api/exam/reschedule
+├ ƒ /api/exam/results
+├ ƒ /api/exam/sessions
+├ ƒ /api/search
+├ ƒ /api/takamol/categories
+├ ƒ /api/takamol/centers
+├ ƒ /api/takamol/dates
+├ ƒ /api/takamol/reservation
+├ ƒ /api/takamol/sessions
+└ ƒ /api/takamol/ticket
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

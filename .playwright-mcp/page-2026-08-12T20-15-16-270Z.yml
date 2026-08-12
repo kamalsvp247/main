@@ -1,0 +1,16 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - heading "T2Hub Register" [level=1] [ref=e4]
+    - textbox "Full Name" [ref=e5]
+    - textbox "Email" [ref=e6]
+    - textbox "Password" [ref=e7]
+    - combobox [ref=e8]:
+      - option "Master Agent"
+      - option "Admin"
+      - option "Staff" [selected]
+    - button "Create Account" [ref=e9]
+    - paragraph [ref=e10]:
+      - text: Already have an account?
+      - link "Login" [ref=e11] [cursor=pointer]:
+        - /url: /login
+  - alert [ref=e12]
