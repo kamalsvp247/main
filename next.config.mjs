@@ -1,8 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
   reactCompiler: true,
-  allowedDevOrigins: ['192.168.31.175'],
+  output: 'standalone',
+  allowedDevOrigins: process.env.NODE_ENV === 'production' ? [] : ['192.168.31.175'],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
 };
 
 export default nextConfig;

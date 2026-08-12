@@ -295,12 +295,15 @@ export default function Home() {
   useEffect(() => {
     const t = setTimeout(() => {
       try {
-        const authed = localStorage.getItem('pacc_admin_authed') === 'true';
-        setAdminAuthed(authed);
-        if (!authed) window.location.replace('/admin');
+        const token = localStorage.getItem('t2hub_token');
+        const userData = localStorage.getItem('t2hub_user');
+        if (!token || !userData) {
+          window.location.replace('/login');
+          return;
+        }
+        setAdminAuthed(true);
       } catch {
-        setAdminAuthed(false);
-        window.location.replace('/admin');
+        window.location.replace('/login');
       }
     }, 0);
     return () => clearTimeout(t);
@@ -1120,7 +1123,7 @@ export default function Home() {
             <div className="absolute inset-0 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
           </div>
           <div className="text-center">
-            <p className="text-sm font-semibold text-white">PACC Admin Console</p>
+            <p className="text-sm font-semibold text-white">T2Hub Console</p>
             <p className="mt-1 text-xs text-slate-500">Loading...</p>
           </div>
         </div>
@@ -1141,8 +1144,8 @@ export default function Home() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold leading-tight tracking-tight text-white">PACC Admin</p>
-            <p className="text-[11px] text-slate-500">Exam Center Console</p>
+             <p className="text-sm font-bold leading-tight tracking-tight text-white">T2Hub</p>
+             <p className="text-[11px] text-slate-500">Exam Automation Platform</p>
           </div>
         </div>
 
@@ -1173,12 +1176,12 @@ export default function Home() {
         <div className="space-y-3 border-t border-white/[0.06] p-4">
           <div className="flex items-center justify-between px-1 text-[10px] text-slate-600">
             <span>Bangladesh Region</span>
-            <span className="font-mono">v0.1.0</span>
+             <span className="font-mono">v0.2.0</span>
           </div>
-          <button onClick={() => { try { localStorage.removeItem('pacc_admin_authed'); } catch {} window.location.href = '/admin'; }}
+          <button onClick={() => { try { localStorage.removeItem('t2hub_token'); localStorage.removeItem('t2hub_user'); } catch {} window.location.href = '/login'; }}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Admin Logout
+            Logout
           </button>
         </div>
       </aside>
@@ -1189,7 +1192,7 @@ export default function Home() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             </div>
-            <span className="text-sm font-bold text-white">PACC Admin</span>
+            <span className="text-sm font-bold text-white">T2Hub</span>
           </div>
           <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
             <span className={`h-1.5 w-1.5 rounded-full ${authStatus?.loggedIn ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-slate-600'}`} />
@@ -1214,7 +1217,7 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-indigo-500/[0.07] via-blue-500/[0.03] to-transparent" />
         <div className="relative mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
           <div className="flex flex-col items-center gap-2 text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-400">Admin Console</p>
+             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-400">T2Hub Console</p>
             <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">{currentTab.label}</h1>
             <p className="text-sm text-slate-500">{currentTab.description}</p>
             <span className="mt-1 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3.5 py-1.5 text-[11px] font-medium text-slate-400">

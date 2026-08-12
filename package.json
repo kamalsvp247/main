@@ -1,14 +1,21 @@
 {
-  "name": "pacc-scraper-api",
-  "version": "0.1.0",
+  "name": "t2hub",
+  "version": "0.2.0",
   "private": true,
+  "description": "T2Hub - SVP Exam Center Automation Platform with RBAC, Quota Management, and Agent System",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "node --experimental-specifier-resolution=node src/app/api/seed/route.js",
+    "db:init": "node -e \"import('@/lib/db/index.js').then(m => m.initDb())\"",
+    "db:seed": "npm run db:init && npm run seed"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "lowdb": "^7.0.1",
     "next": "16.2.10",
     "playwright": "^1.62.0",
     "puppeteer": "^25.3.0",
@@ -17,6 +24,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",

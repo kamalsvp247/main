@@ -25,6 +25,55 @@ const SVP_API_BASE = 'https://svp-international-api.pacc.sa/api/v1';
 const TOKEN_FILE = join(process.cwd(), '.svp-token.json');
 const STORAGE_FILE = join(process.cwd(), '.svp-storage.json');
 
+// ─── Retry & Resilience Utilities ────────────────────────────────
+
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
+  let lastError;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`[RETRY] Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await sleep(delay);
+      }
+    }
+  }
+  throw lastError;
+}
+
+// ─── OTP Interception (DakBox Integration) ───────────────────────
+
+async function waitForOTP(phoneNumber, candidateName, timeoutMs = 300000) {
+  const startTime = Date.now();
+  const pollInterval = 5000;
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      const { pollOTP, requestOTP } = await import('@/lib/otp/index.js');
+      let otpRequest = await requestOTP({ phoneNumber, candidateName });
+      if (!otpRequest.dakbox_request_id) {
+        await sleep(pollInterval);
+        continue;
+      }
+      for (let i = 0; i < (timeoutMs / pollInterval); i++) {
+        const result = await pollOTP(otpRequest.id);
+        if (result.otp_code) return result.otp_code;
+        if (result.status === 'expired' || result.status === 'cancelled') return null;
+        await sleep(pollInterval);
+      }
+      return null;
+    } catch (error) {
+      console.error('[OTP] Wait error:', error.message);
+      await sleep(pollInterval);
+    }
+  }
+  return null;
+}
+
 // ─── Browser Session Management ─────────────────────────────────
 
 // On Windows, Smart App Control blocks Playwright's unsigned bundled Chromium,
@@ -867,6 +916,47 @@ export async function peekSessionTime({ occupationId, examSessionId, languageCod
     console.error(`[PEEK] Error: ${err.message}`);
     return { ok: false, error: err.message };
   }
+}
+
+// ─── Seat Hold Timeout Monitor ──────────────────────────────────
+
+const activeHolds = new Map();
+
+export function registerSeatHold(reservationId, sessionId, timeoutMs = 600000) {
+  activeHolds.set(reservationId, {
+    sessionId,
+    startTime: Date.now(),
+    timeoutMs,
+    status: 'active'
+  });
+  setTimeout(() => {
+    const hold = activeHolds.get(reservationId);
+    if (hold && hold.status === 'active') {
+      hold.status = 'expired';
+      console.log(`[SEAT_HOLD] Reservation ${reservationId} hold expired after ${timeoutMs}ms`);
+      activeHolds.delete(reservationId);
+    }
+  }, timeoutMs);
+}
+
+export function getActiveHolds() {
+  return Array.from(activeHolds.entries()).map(([id, hold]) => ({
+    reservationId: id,
+    sessionId: hold.sessionId,
+    startTime: hold.startTime,
+    timeoutMs: hold.timeoutMs,
+    status: hold.status
+  }));
+}
+
+export function cancelSeatHold(reservationId) {
+  const hold = activeHolds.get(reservationId);
+  if (hold) {
+    hold.status = 'cancelled';
+    activeHolds.delete(reservationId);
+    return true;
+  }
+  return false;
 }
 
 // ─── Cleanup ────────────────────────────────────────────────────

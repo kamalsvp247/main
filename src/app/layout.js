@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "PACC Admin — Exam Center Console",
+  title: "T2Hub — Exam Center Console",
   description: "Search, schedule, reschedule and manage exam bookings for Bangladesh.",
 };
 

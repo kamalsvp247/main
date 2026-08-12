@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { isLoggedIn, rebookViaAPI } from '@/lib/svp-playwright';
+import { IS_VERCEL } from '@/lib/config.js';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
+  if (IS_VERCEL) {
+    return NextResponse.json({
+      success: false,
+      error: 'Browser automation is not available on Vercel serverless. Please use local deployment for SVP operations.'
+    }, { status: 501 });
+  }
   try {
     if (!isLoggedIn()) {
       return NextResponse.json(
