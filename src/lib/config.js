@@ -26,3 +26,5 @@ export const PORT = Number(process.env.PORT) || 3000;
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 export const IS_SERVERLESS = process.env.VERCEL === '1' || process.env.VERCEL_ENV === 'production';
 export const IS_VERCEL = IS_SERVERLESS;
+export const IS_RAILWAY = process.env.RAILWAY_ENVIRONMENT === 'production' || process.env.RAILWAY_PROJECT_ID !== undefined;
+export const RAILWAY_BACKEND_URL = process.env.RAILWAY_BACKEND_URL || '';

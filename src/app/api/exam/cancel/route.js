@@ -1,15 +1,31 @@
 import { NextResponse } from 'next/server';
 import { isLoggedIn, cancelViaAPI } from '@/lib/svp-playwright';
-import { IS_VERCEL } from '@/lib/config.js';
+import { IS_VERCEL, RAILWAY_BACKEND_URL } from '@/lib/config.js';
 
 export const dynamic = 'force-dynamic';
 
+async function callRailwayBackend(action, payload = {}) {
+  const response = await fetch(`${RAILWAY_BACKEND_URL}/api/backend`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, payload })
+  });
+  return response.json();
+}
+
 export async function POST(request) {
   if (IS_VERCEL) {
-    return NextResponse.json({
-      success: false,
-      error: 'Browser automation is not available on Vercel serverless. Please use local deployment for SVP operations.'
-    }, { status: 501 });
+    if (!RAILWAY_BACKEND_URL) {
+      return NextResponse.json({ success: false, error: 'Railway backend not configured. Set RAILWAY_BACKEND_URL.' }, { status: 501 });
+    }
+    try {
+      const body = await request.json();
+      const result = await callRailwayBackend('cancel', body);
+      return NextResponse.json(result);
+    } catch (error) {
+      console.error('[exam/cancel] Railway proxy error:', error.message);
+      return NextResponse.json({ success: false, error: `Backend error: ${error.message}` }, { status: 502 });
+    }
   }
   try {
     if (!isLoggedIn()) {

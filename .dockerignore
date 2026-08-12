@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+build
+.git
+.gitignore
+README.md
+.env*
+.vercel
+.vercelignore
+.playwright-mcp
+*.log
+coverage
+.nyc_output
