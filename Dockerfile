@@ -50,7 +50,12 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install dependencies
+# Install dependencies (skip Puppeteer browser download)
+ENV PUPPETEER_SKIP_DOWNLOAD=1
+ENV SUPABASE_URL=https://placeholder.supabase.co
+ENV SUPABASE_SECRET_KEY=placeholder
+ENV SUPABASE_PUBLISHABLE_KEY=placeholder
+ENV SUPABASE_JWKS_URL=https://placeholder.supabase.co/auth/v1/.well-known/jwks.json
 RUN npm ci --only=production
 
 # Copy source code
