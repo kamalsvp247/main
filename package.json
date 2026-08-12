@@ -13,6 +13,7 @@
     "db:seed": "npm run db:init && npm run seed"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "lowdb": "^7.0.1",
