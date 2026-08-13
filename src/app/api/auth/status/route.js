@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { isLoggedIn, getToken, loadSessionFromSupabase, hasSupabaseSession } from '@/lib/svp-playwright';
+import { isLoggedIn, getToken, hasSupabaseSession } from '@/lib/svp-playwright';
+import { loadSessionFromSupabase } from '@/lib/svp-auth.js';
 
 export const dynamic = 'force-dynamic';
 
