@@ -272,7 +272,7 @@ async function doLogin() {
     const playwright = await getPlaywright();
     browser = await playwright.chromium.launch({
       ...BROWSER_LAUNCH_OPTS,
-      headless: true,
+      headless: false,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
