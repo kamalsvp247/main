@@ -12,7 +12,9 @@
     "db:init": "node -e \"import('@/lib/db/index.js').then(m => m.initDb())\"",
     "db:seed": "npm run db:init && npm run seed",
     "svp-login": "node -e \"import('./src/lib/svp-playwright.js').then(m => m.login()).then(r => console.log(r)).catch(e => console.error(e))\"",
-    "svp-upload": "node scripts/upload-svp-session.js"
+    "svp-upload": "node scripts/upload-svp-session.js",
+    "env:railway": "node scripts/sync-env.mjs railway .env.railway",
+    "env:vercel": "node scripts/sync-env.mjs vercel .env.vercel"
   },
   "dependencies": {
     "@supabase/server": "^1.4.1",
