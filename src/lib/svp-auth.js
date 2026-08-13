@@ -239,20 +239,32 @@ loadToken();
 let supabaseSession = null;
 async function loadSessionFromSupabase() {
   try {
+    console.log('[svp-auth] Loading SVP session from Supabase...');
     const { ensureSupabase } = await import('@/lib/supabase/client.js');
     const supabase = await ensureSupabase();
     const { data, error } = await supabase.from('sessions').select('*').limit(1);
-    if (error || !data || data.length === 0) return null;
+    if (error) {
+      console.error('[svp-auth] Supabase sessions query error:', error.message);
+      return null;
+    }
+    if (!data || data.length === 0) {
+      console.warn('[svp-auth] No SVP session found in Supabase');
+      return null;
+    }
     const session = data[0];
+    console.log('[svp-auth] Loaded SVP session from Supabase:', session.id);
     if (session.token) {
       authToken = session.token.startsWith('Bearer ') ? session.token.slice(7) : session.token;
       tokenExpiry = session.expires_at ? new Date(session.expires_at) : null;
+      console.log('[svp-auth] Set authToken from Supabase, expires:', tokenExpiry);
     }
     if (session.storage && session.storage.cookies) {
       supabaseSession = session.storage;
+      console.log('[svp-auth] Set supabaseSession with', session.storage.cookies?.length, 'cookies');
     }
     return session;
-  } catch {
+  } catch (err) {
+    console.error('[svp-auth] Failed to load SVP session from Supabase:', err.message);
     return null;
   }
 }
