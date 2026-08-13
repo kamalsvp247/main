@@ -13,6 +13,13 @@ async function callRailwayBackend(action, payload = {}) {
   return response.json();
 }
 
+export async function GET() {
+  return NextResponse.json({
+    success: false,
+    error: 'This is an API endpoint. Use POST to initiate SVP login. For the T2Hub login page, visit /login.'
+  }, { status: 405 });
+}
+
 export async function POST() {
   if (IS_VERCEL) {
     if (!RAILWAY_BACKEND_URL) {

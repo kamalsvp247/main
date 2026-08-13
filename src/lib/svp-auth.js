@@ -262,6 +262,9 @@ if (IS_RAILWAY) {
 }
 
 export function getToken() {
+  if (!authToken) {
+    loadToken();
+  }
   if (!authToken) return null;
   if (tokenExpiry && new Date() >= tokenExpiry) {
     authToken = null;
