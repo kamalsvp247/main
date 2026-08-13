@@ -1,2 +1,0 @@
-[     751ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://takamul-main.vercel.app/register:0
-[   57107ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://takamul-main.vercel.app/api/auth/register:0
