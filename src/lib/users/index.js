@@ -81,6 +81,7 @@ export async function deleteUser(id) {
 }
 
 export async function authenticateUser(email, password) {
+  const supabase = await ensureSupabase();
   const user = await getUserWithPassword(email);
   if (!user) return null;
   if (user.status !== 'active') return null;
