@@ -5,10 +5,14 @@ import {
   persistLiveBrowserSession
 } from '@/lib/svp-live-browser.js';
 import { IS_RAILWAY } from '@/lib/config.js';
+import { proxyToRailway, shouldProxyToRailway } from '@/lib/backend/proxy.js';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
+  if (shouldProxyToRailway()) {
+    return proxyToRailway('/api/svp-capture-session', { method: 'POST' });
+  }
   if (!isLiveBrowserOpen()) {
     return NextResponse.json(
       { success: false, error: 'Live browser is not open. Open it first, then log in to SVP.' },

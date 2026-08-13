@@ -113,9 +113,12 @@ function extractToken(storage) {
   }
   const origins = storage?.origins || [];
   for (const o of origins) {
-    const ls = o.localStorage || {};
-    for (const k of ['auth_token', 'token', 'access_token', 'vue-auth.token', 'svp_token']) {
-      if (ls[k] && String(ls[k]).split('.').length === 3) return String(ls[k]);
+    const entries = Array.isArray(o.localStorage) ? o.localStorage : [];
+    for (const item of entries) {
+      const value = String(item?.value || '').replace(/^Bearer\s+/i, '');
+      if (['auth_token', 'auth_token_default', 'token', 'access_token', 'vue-auth.token', 'svp_token'].includes(item?.name) && value.split('.').length === 3) {
+        return value;
+      }
     }
   }
   return null;

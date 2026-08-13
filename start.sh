@@ -54,6 +54,6 @@ echo "[$(ts)] [start] Starting health heartbeat (every 30s) on port ${HEALTH_POR
 ) &
 
 # 6) Start the Next.js application (foreground)
-echo "[$(ts)] [start] Starting Next.js on port 3000..."
+echo "[$(ts)] [start] Starting Next.js on port ${HEALTH_PORT}..."
 exec npm run start
 

@@ -4,10 +4,14 @@ import {
   isLiveBrowserOpen,
   openLiveBrowser
 } from '@/lib/svp-live-browser.js';
+import { proxyToRailway, shouldProxyToRailway } from '@/lib/backend/proxy.js';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
+  if (shouldProxyToRailway()) {
+    return proxyToRailway('/api/svp-open-browser', { method: 'POST' });
+  }
   if (!isLiveBrowserSupported()) {
     return NextResponse.json(
       { success: false, error: 'Live browser requires the Railway Linux backend with Xvfb.' },
