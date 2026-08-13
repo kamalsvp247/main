@@ -4,13 +4,13 @@ import { IS_RAILWAY } from '@/lib/config.js';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  if (!IS_RAILWAY) {
-    return NextResponse.json({ success: false, error: 'Remote browser is only available on Railway backend' }, { status: 400 });
-  }
-
-  const host = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.VERCEL_URL || 'localhost';
-  const protocol = 'https';
-  const novncUrl = `${protocol}://${host}:6080/vnc.html`;
+  // Allow an explicit override (e.g. a Railway-generated 6080 domain).
+  const explicit = process.env.NOVNC_PUBLIC_URL;
+  const host = explicit
+    ? explicit.replace(/^https?:\/\//, '').split('/')[0]
+    : (process.env.RAILWAY_PUBLIC_DOMAIN || process.env.VERCEL_URL || 'localhost');
+  const protocol = explicit ? (explicit.startsWith('http://') ? 'http' : 'https') : 'https';
+  const novncUrl = `${protocol}://${host}:6080/vnc.html?autoconnect=true`;
 
   return NextResponse.json({
     success: true,
@@ -19,7 +19,8 @@ export async function GET() {
       host,
       port: 6080,
       vncPort: 5900,
-      display: ':99',
+      display: process.env.DISPLAY || ':99',
+      supported: IS_RAILWAY,
       message: 'Remote browser is ready. Use the URL below to access the virtual desktop.'
     }
   });

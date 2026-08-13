@@ -8,6 +8,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState('');
   const [loadingRemote, setLoadingRemote] = useState(false);
+  const [remoteOpen, setRemoteOpen] = useState(false);
+  const [captureMsg, setCaptureMsg] = useState('');
+  const [capturing, setCapturing] = useState(false);
 
   useEffect(() => {
     document.title = 'Login — T2Hub';
@@ -42,7 +45,17 @@ export default function LoginPage() {
   async function openRemoteBrowser() {
     setLoadingRemote(true);
     setError('');
+    setCaptureMsg('');
     try {
+      // 1) Ensure the headful Playwright browser is launched on the Xvfb screen.
+      const openRes = await fetch('/api/svp-open-browser', { method: 'POST' });
+      const openJson = await openRes.json();
+      if (!openJson.success) {
+        setError(openJson.error || 'Failed to start remote browser');
+      } else {
+        setRemoteOpen(true);
+      }
+      // 2) Get the public noVNC URL for the virtual screen.
       const res = await fetch('/api/svp-login-url');
       const json = await res.json();
       if (json.success) {
@@ -56,6 +69,26 @@ export default function LoginPage() {
       setError('Connection error');
     } finally {
       setLoadingRemote(false);
+    }
+  }
+
+  async function captureSession() {
+    setCapturing(true);
+    setCaptureMsg('');
+    try {
+      const res = await fetch('/api/svp-capture-session', { method: 'POST' });
+      const json = await res.json();
+      if (json.success) {
+        setCaptureMsg(json.data?.hasToken
+          ? 'SVP session captured and saved.'
+          : 'Captured, but no SVP token found — make sure you logged in inside the browser.');
+      } else {
+        setCaptureMsg(json.error || 'Failed to capture session.');
+      }
+    } catch {
+      setCaptureMsg('Connection error while capturing session.');
+    } finally {
+      setCapturing(false);
     }
   }
 
@@ -83,6 +116,10 @@ export default function LoginPage() {
               <iframe src={remoteUrl} className="w-full h-[360px] rounded-lg border border-white/10" title="SVP Remote Browser" />
             </div>
           )}
+          <button type="button" onClick={captureSession} disabled={capturing || !remoteOpen} className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-50">
+            {capturing ? 'Capturing...' : 'Capture SVP Session'}
+          </button>
+          {captureMsg && <p className="text-xs text-slate-300 text-center">{captureMsg}</p>}
         </div>
 
         <p className="text-center text-xs text-slate-500">Don&apos;t have an account? <a href="/register" className="text-indigo-400">Register</a></p>

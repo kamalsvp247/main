@@ -126,9 +126,12 @@ async function ensureManagedBrowser() {
   if (!token) throw new Error('Not authenticated');
 
   const playwright = await getPlaywright();
+  // On Railway the container runs a virtual screen (Xvfb :99). Launch headful
+  // so the automation browser is visible/controllable through the noVNC view.
+  const headless = !IS_RAILWAY;
   managedBrowser = await playwright.chromium.launch({
     ...BROWSER_LAUNCH_OPTS,
-    headless: true,
+    headless,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
