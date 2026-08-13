@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
 export default function DashboardPage() {
@@ -53,10 +54,10 @@ export default function DashboardPage() {
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6">
             <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
             <div className="space-y-3">
-              <a href="/" className="block rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 hover:bg-white/[0.06] transition-colors">
+              <Link href="/" className="block rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 hover:bg-white/[0.06] transition-colors">
                 <p className="font-medium text-white">Search Exam Centers</p>
                 <p className="text-xs text-slate-500 mt-1">Find available exam centers and dates</p>
-              </a>
+              </Link>
               <a href="/agents" className="block rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 hover:bg-white/[0.06] transition-colors">
                 <p className="font-medium text-white">Agent Management</p>
                 <p className="text-xs text-slate-500 mt-1">Manage agents and sub-agents</p>

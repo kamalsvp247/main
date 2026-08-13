@@ -48,9 +48,6 @@ RUN apt-get update && apt-get install -y \
     python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Playwright browsers
-RUN npx playwright install chromium
-
 # Set working directory
 WORKDIR /app
 
@@ -59,14 +56,10 @@ COPY package.json package-lock.json ./
 
 # Install dependencies (skip Puppeteer browser download)
 ENV PUPPETEER_SKIP_DOWNLOAD=1
-ENV SUPABASE_URL=https://placeholder.supabase.co
-ENV SUPABASE_SECRET_KEY=placeholder
-ENV SUPABASE_PUBLISHABLE_KEY=placeholder
-ENV SUPABASE_JWKS_URL=https://placeholder.supabase.co/auth/v1/.well-known/jwks.json
 ENV DISPLAY=:99
 ENV VNC_PORT=5900
 ENV NOVNC_PORT=6080
-RUN npm ci --only=production
+RUN npm ci --omit=dev && npx playwright install chromium
 
 # Copy source code
 COPY . .
