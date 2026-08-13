@@ -241,8 +241,21 @@ async function ensureManagedBrowser() {
   });
   // ─────────────────────────────────────────────────────────────────
 
-  await managedPage.goto(SVP_BASE, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await managedPage.waitForTimeout(3000);
+  // Prime the managed page. The bare SVP root (SVP_BASE) immediately
+  // redirects/relocates (SPA router or / -> /auth/login) which makes a
+  // `domcontentloaded` wait throw `net::ERR_ABORTED`. Navigate to the real
+  // destination and use `waitUntil: 'commit'` (resolves as soon as the
+  // navigation commits, before any redirect completes) so an in-flight
+  // abort is non-fatal. Anything that goes wrong here is logged but does
+  // not tear down the already-launched browser.
+  try {
+    await managedPage.goto(SVP_LOGIN_URL, { waitUntil: 'commit', timeout: 30000 });
+  } catch (gotoErr) {
+    console.warn('[svp-playwright] initial navigation non-fatal:', gotoErr.message);
+  }
+  try {
+    await managedPage.waitForTimeout(3000);
+  } catch {}
   managedBrowserReady = true;
   return managedPage;
 }
