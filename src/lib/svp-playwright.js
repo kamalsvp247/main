@@ -14,6 +14,7 @@
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { getToken as getAuthToken, isLoggedIn as checkLoggedIn, logout as doLogout } from './svp-auth.js';
+import { IS_RAILWAY } from './config.js';
 
 export { checkLoggedIn as isLoggedIn, doLogout as logout, getAuthToken as getToken };
 
@@ -257,14 +258,12 @@ async function doLogin() {
     const playwright = await getPlaywright();
     browser = await playwright.chromium.launch({
       ...BROWSER_LAUNCH_OPTS,
-      headless: false,
+      headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-blink-features=AutomationControlled',
-        '--window-size=480,650',
-        '--window-position=400,100'
+        '--disable-blink-features=AutomationControlled'
       ]
     });
 
