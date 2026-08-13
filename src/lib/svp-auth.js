@@ -233,8 +233,6 @@ async function doLogin() {
   }
 }
 
-export function getToken() {
-  if (!authToken) {
 loadToken();
 
 // On Railway, also try loading SVP session from Supabase
@@ -262,7 +260,8 @@ async function loadSessionFromSupabase() {
 if (IS_RAILWAY) {
   loadSessionFromSupabase().catch(() => {});
 }
-  }
+
+export function getToken() {
   if (!authToken) return null;
   if (tokenExpiry && new Date() >= tokenExpiry) {
     authToken = null;
