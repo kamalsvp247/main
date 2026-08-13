@@ -6,6 +6,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [remoteUrl, setRemoteUrl] = useState('');
+  const [loadingRemote, setLoadingRemote] = useState(false);
 
   useEffect(() => {
     document.title = 'Login — T2Hub';
@@ -37,18 +39,54 @@ export default function LoginPage() {
     }
   }
 
+  async function openRemoteBrowser() {
+    setLoadingRemote(true);
+    setError('');
+    try {
+      const res = await fetch('/api/svp-login-url');
+      const json = await res.json();
+      if (json.success) {
+        const url = json.data.novncUrl;
+        setRemoteUrl(url);
+        window.open(url, '_blank', 'width=1280,height=800');
+      } else {
+        setError(json.error || 'Failed to load remote browser');
+      }
+    } catch {
+      setError('Connection error');
+    } finally {
+      setLoadingRemote(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-white/[0.05] p-8 shadow-2xl">
-        <h1 className="text-2xl font-bold text-white text-center">T2Hub Login</h1>
-        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white" />
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white" />
-        <button type="submit" disabled={loading} className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-50">
-          {loading ? 'Signing in...' : 'Sign In'}
-        </button>
+      <div className="w-full max-w-sm space-y-4">
+        <form onSubmit={handleSubmit} className="rounded-2xl border border-white/10 bg-white/[0.05] p-8 shadow-2xl space-y-4">
+          <h1 className="text-2xl font-bold text-white text-center">T2Hub Login</h1>
+          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white" />
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required className="w-full rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white" />
+          <button type="submit" disabled={loading} className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-50">
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 shadow-2xl space-y-3">
+          <h2 className="text-lg font-semibold text-white text-center">SVP Browser</h2>
+          <p className="text-xs text-slate-400 text-center">Open the remote SVP browser to complete OTP login manually.</p>
+          <button type="button" onClick={openRemoteBrowser} disabled={loadingRemote} className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 py-3 text-sm font-semibold text-white disabled:opacity-50">
+            {loadingRemote ? 'Loading...' : 'Open Live Browser'}
+          </button>
+          {remoteUrl && (
+            <div className="rounded-lg border border-white/10 bg-black/30 p-2">
+              <iframe src={remoteUrl} className="w-full h-[360px] rounded-lg border border-white/10" title="SVP Remote Browser" />
+            </div>
+          )}
+        </div>
+
         <p className="text-center text-xs text-slate-500">Don&apos;t have an account? <a href="/register" className="text-indigo-400">Register</a></p>
-      </form>
+      </div>
     </div>
   );
 }

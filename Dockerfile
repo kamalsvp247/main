@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-# Install Playwright dependencies
+# Install Playwright + Xvfb/VNC dependencies
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -39,6 +39,13 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     lsb-release \
     xdg-utils \
+    xvfb \
+    x11vnc \
+    fluxbox \
+    novnc \
+    websockify \
+    supervisor \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Playwright browsers
@@ -56,16 +63,22 @@ ENV SUPABASE_URL=https://placeholder.supabase.co
 ENV SUPABASE_SECRET_KEY=placeholder
 ENV SUPABASE_PUBLISHABLE_KEY=placeholder
 ENV SUPABASE_JWKS_URL=https://placeholder.supabase.co/auth/v1/.well-known/jwks.json
+ENV DISPLAY=:99
+ENV VNC_PORT=5900
+ENV NOVNC_PORT=6080
 RUN npm ci --only=production
 
 # Copy source code
 COPY . .
 
+# Make start script executable
+RUN chmod +x /app/start.sh
+
 # Build the application
 RUN npm run build
 
-# Expose port
-EXPOSE 3000
+# Expose ports
+EXPOSE 3000 5900 6080
 
-# Start the application
-CMD ["npm", "run", "start"]
+# Start the application with virtual display
+CMD ["/app/start.sh"]
