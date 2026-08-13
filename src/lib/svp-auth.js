@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { IS_RAILWAY } from './config.js';
 
 const TOKEN_FILE = join(process.cwd(), '.svp-token.json');
 const STORAGE_FILE = join(process.cwd(), '.svp-storage.json');
@@ -234,7 +235,33 @@ async function doLogin() {
 
 export function getToken() {
   if (!authToken) {
-    loadToken();
+loadToken();
+
+// On Railway, also try loading SVP session from Supabase
+let supabaseSession = null;
+async function loadSessionFromSupabase() {
+  try {
+    const { ensureSupabase } = await import('@/lib/supabase/client.js');
+    const supabase = await ensureSupabase();
+    const { data, error } = await supabase.from('sessions').select('*').limit(1);
+    if (error || !data || data.length === 0) return null;
+    const session = data[0];
+    if (session.token) {
+      authToken = session.token.startsWith('Bearer ') ? session.token.slice(7) : session.token;
+      tokenExpiry = session.expires_at ? new Date(session.expires_at) : null;
+    }
+    if (session.storage && session.storage.cookies) {
+      supabaseSession = session.storage;
+    }
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+if (IS_RAILWAY) {
+  loadSessionFromSupabase().catch(() => {});
+}
   }
   if (!authToken) return null;
   if (tokenExpiry && new Date() >= tokenExpiry) {
@@ -246,6 +273,9 @@ export function getToken() {
 }
 
 export function isLoggedIn() {
+  if (IS_RAILWAY && hasSupabaseSession()) {
+    return true;
+  }
   return !!getToken();
 }
 
@@ -799,6 +829,14 @@ export function getAuthPage() {
 export function isAuthPageAlive() {
   if (!authPage) return false;
   return authPage.evaluate(() => 1).then(() => true, () => false);
+}
+
+export function getSupabaseSession() {
+  return supabaseSession;
+}
+
+export function hasSupabaseSession() {
+  return !!supabaseSession;
 }
 
 process.on('SIGTERM', () => { shutdownAuth(); shutdownBrowserApi(); });

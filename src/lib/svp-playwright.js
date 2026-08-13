@@ -13,7 +13,7 @@
 
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { getToken as getAuthToken, isLoggedIn as checkLoggedIn, logout as doLogout } from './svp-auth.js';
+import { getToken as getAuthToken, isLoggedIn as checkLoggedIn, logout as doLogout, hasSupabaseSession } from './svp-auth.js';
 import { IS_RAILWAY } from './config.js';
 
 export { checkLoggedIn as isLoggedIn, doLogout as logout, getAuthToken as getToken };
@@ -149,6 +149,17 @@ async function ensureManagedBrowser() {
   } catch (err) {
     console.warn('[svp-playwright] Failed to load storage state:', err.message);
   }
+  if (!storageState && IS_RAILWAY) {
+    try {
+      const { getSupabaseSession } = await import('./svp-auth.js');
+      const supabaseSession = getSupabaseSession();
+      if (supabaseSession && supabaseSession.storage) {
+        storageState = supabaseSession.storage;
+      }
+    } catch (err) {
+      console.warn('[svp-playwright] Failed to load Supabase session:', err.message);
+    }
+  }
   const hasStorageState = !!(storageState &&
     ((storageState.cookies && storageState.cookies.length > 0) ||
      (storageState.origins && storageState.origins.length > 0)));
@@ -248,6 +259,9 @@ async function closeManagedBrowser() {
 export function login() {
   if (checkLoggedIn()) {
     return { success: true, message: 'Already logged in.' };
+  }
+  if (IS_RAILWAY) {
+    return { success: false, error: 'SVP login requires browser + manual OTP. On Railway, upload your SVP session from local machine via /api/svp-session, or use direct API credentials.' };
   }
   return doLogin();
 }
