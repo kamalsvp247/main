@@ -10,7 +10,9 @@
     "lint": "eslint",
     "seed": "node --experimental-specifier-resolution=node src/app/api/seed/route.js",
     "db:init": "node -e \"import('@/lib/db/index.js').then(m => m.initDb())\"",
-    "db:seed": "npm run db:init && npm run seed"
+    "db:seed": "npm run db:init && npm run seed",
+    "svp-login": "node -e \"import('./src/lib/svp-playwright.js').then(m => m.login()).then(r => console.log(r)).catch(e => console.error(e))\"",
+    "svp-upload": "node scripts/upload-svp-session.js"
   },
   "dependencies": {
     "@supabase/server": "^1.4.1",
