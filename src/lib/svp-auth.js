@@ -854,4 +854,4 @@ export function hasSupabaseSession() {
 }
 
 process.on('SIGTERM', () => { shutdownAuth(); shutdownBrowserApi(); });
-process.on('SIGINT', () => { shutdownAuth(); shutdownBrowserApi(); });
+process.on('SIGINT', () => { shutdownAuth(); shutdownBrowserApi(); });  
