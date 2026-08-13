@@ -5,6 +5,10 @@ import { proxyToRailway, shouldProxyToRailway } from '@/lib/backend/proxy.js';
 export const dynamic = 'force-dynamic';
 
 function buildNoVncUrl() {
+  // Preferred: an explicit public noVNC URL (e.g. a dedicated Railway domain
+  // that fronts the websockify port directly). We only honor this when it is
+  // actually set, so the default same-origin proxy path below is used on the
+  // Railway app host where noVNC is reached through our own /vnc proxy.
   const explicit = process.env.NOVNC_PUBLIC_URL;
   if (explicit) {
     const url = new URL(explicit);
@@ -13,13 +17,19 @@ function buildNoVncUrl() {
     return { novncUrl: url.toString(), host: url.host, port: url.port || 443 };
   }
 
+  // Default: same-origin proxy. server.js reverse-proxies /vnc/* and
+  // /websockify to the internal websockify (localhost:6080). Because Railway
+  // only exposes the single injected PORT, this is the only reliable way to
+  // reach noVNC from the browser — it rides on the very host/port Next.js is
+  // already served from.
   const host = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.VERCEL_URL || 'localhost';
   const protocol = host === 'localhost' ? 'http' : 'https';
-  const port = host === 'localhost' ? ':6080' : '';
+  const base = host === 'localhost' ? `${protocol}://${host}:${process.env.PORT || 3000}` : `${protocol}://${host}`;
+  const novncPath = `/vnc/vnc.html?path=websockify&autoconnect=true&reconnect=true`;
   return {
-    novncUrl: `${protocol}://${host}${port}/vnc.html?autoconnect=true`,
+    novncUrl: `${base}${novncPath}`,
     host,
-    port: host === 'localhost' ? 6080 : 443,
+    port: host === 'localhost' ? Number(process.env.PORT || 3000) : 443,
   };
 }
 

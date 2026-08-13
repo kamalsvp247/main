@@ -53,7 +53,11 @@ echo "[$(ts)] [start] Starting health heartbeat (every 30s) on port ${HEALTH_POR
   done
 ) &
 
-# 6) Start the Next.js application (foreground)
-echo "[$(ts)] [start] Starting Next.js on port ${HEALTH_PORT}..."
-exec npm run start
+# 6) Start the Next.js application (foreground) THROUGH the custom server
+#    (server.js) so the internal noVNC stack (websockify on :6080) is reachable
+#    via /vnc/* and /websockify on Railway's single exposed PORT. The custom
+#    server still serves the whole Next.js app; this is Railway-only (Vercel
+#    ignores server.js and runs the standard serverless build).
+echo "[$(ts)] [start] Starting custom Next.js + noVNC proxy server on port ${HEALTH_PORT}..."
+exec node server.js
 
