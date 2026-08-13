@@ -1,5 +1,7 @@
 # Railway + Vercel + Supabase deployment
 
+This file is the deployment source of truth for this repo. If a merge conflict happens in this file, keep one complete copy of each section below and remove duplicate headings/conflict markers.
+
 ## 1. Supabase
 
 1. Create a Supabase project.
@@ -30,7 +32,7 @@ Railway injects `PORT`; `start.sh` uses that port for the health check and Next.
 
 ## 3. Vercel frontend/previews
 
-Import the same GitHub repository into Vercel and add the same Supabase public variables:
+Import the same GitHub repository into Vercel and add these variables:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
