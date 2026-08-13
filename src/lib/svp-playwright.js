@@ -16,7 +16,7 @@ import { join } from 'path';
 import { getToken as getAuthToken, isLoggedIn as checkLoggedIn, logout as doLogout, hasSupabaseSession } from './svp-auth.js';
 import { IS_RAILWAY } from './config.js';
 
-export { checkLoggedIn as isLoggedIn, doLogout as logout, getAuthToken as getToken };
+export { checkLoggedIn as isLoggedIn, doLogout as logout, getAuthToken as getToken, hasSupabaseSession };
 
 const SVP_BASE = 'https://svp-international.pacc.sa';
 const SVP_LOGIN_URL = `${SVP_BASE}/auth/login?role=labor`;

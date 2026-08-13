@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { isLoggedIn, getToken, hasSupabaseSession } from '@/lib/svp-playwright';
-import { loadSessionFromSupabase } from '@/lib/svp-auth.js';
+import { isLoggedIn, getToken } from '@/lib/svp-playwright';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const session = await loadSessionFromSupabase();
     const loggedIn = isLoggedIn();
     const token = getToken();
 
@@ -26,13 +24,7 @@ export async function GET() {
       success: true,
       data: {
         loggedIn,
-        tokenInfo,
-        debug: {
-          hasSupabaseSession: hasSupabaseSession(),
-          sessionLoaded: !!session,
-          sessionId: session?.id || null,
-          isRailway: process.env.RAILWAY_ENVIRONMENT === 'production'
-        }
+        tokenInfo
       }
     });
   } catch (error) {

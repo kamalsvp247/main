@@ -237,7 +237,7 @@ loadToken();
 
 // On Railway, also try loading SVP session from Supabase
 let supabaseSession = null;
-async function loadSessionFromSupabase() {
+export async function loadSessionFromSupabase() {
   try {
     console.log('[svp-auth] Loading SVP session from Supabase...');
     const { ensureSupabase } = await import('@/lib/supabase/client.js');
