@@ -2,13 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "framework": "nextjs",
-  "regions": ["iad1"],
+  "regions": [
+    "iad1"
+  ],
   "functions": {
     "src/app/api/**/*.js": {
       "maxDuration": 60
     }
   },
-  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ]; then echo '[vercel] Skipping build on main — production is deployed via Railway (Dockerfile/start.sh).'; exit 0; else echo '[vercel] Building preview branch.'; exit 1; fi",
   "headers": [
     {
       "source": "/(.*)",
