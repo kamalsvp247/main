@@ -124,7 +124,8 @@ async function ensureManagedBrowser() {
   const token = getAuthToken();
   if (!token) throw new Error('Not authenticated');
 
-  managedBrowser = await chromium.launch({
+  const playwright = await getPlaywright();
+  managedBrowser = await playwright.chromium.launch({
     ...BROWSER_LAUNCH_OPTS,
     headless: true,
     args: [
@@ -253,7 +254,8 @@ export function login() {
 async function doLogin() {
   let browser = null;
   try {
-    browser = await chromium.launch({
+    const playwright = await getPlaywright();
+    browser = await playwright.chromium.launch({
       ...BROWSER_LAUNCH_OPTS,
       headless: false,
       args: [
