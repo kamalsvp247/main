@@ -42,10 +42,13 @@ echo "[$(ts)] [start] Virtual display ready. noVNC will be available on port 608
 echo "[$(ts)] [start] noVNC: http://0.0.0.0:6080/vnc.html   |   VNC: 0.0.0.0:5900"
 
 # 5) Health heartbeat → keeps Railway "live logs" active and proves the app is alive.
-echo "[$(ts)] [start] Starting health heartbeat (every 30s)..."
+# Railway injects PORT (often 8080), which `next start` honors. The heartbeat must
+# hit that same port, not a hardcoded 3000, or it fails with "ERR fetch failed".
+HEALTH_PORT="${PORT:-3000}"
+echo "[$(ts)] [start] Starting health heartbeat (every 30s) on port ${HEALTH_PORT}..."
 (
   while true; do
-    node -e "fetch('http://localhost:3000/api/health').then(r=>r.json()).then(d=>console.log('[$(ts)] [health] OK', JSON.stringify(d))).catch(e=>console.log('[$(ts)] [health] ERR', e.message))" 2>&1
+    node -e "fetch('http://localhost:${HEALTH_PORT}/api/health').then(r=>r.json()).then(d=>console.log('[$(ts)] [health] OK', JSON.stringify(d))).catch(e=>console.log('[$(ts)] [health] ERR', e.message))" 2>&1
     sleep 30
   done
 ) &
